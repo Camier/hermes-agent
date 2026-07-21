@@ -648,6 +648,13 @@ def _common_betas_for_base_url(
     return betas
 
 
+def _apply_custom_provider_headers(kwargs: dict, base_url: str | None) -> None:
+    """Merge endpoint-scoped headers onto Anthropic SDK client kwargs."""
+    from hermes_cli.config import apply_custom_provider_extra_headers_to_client_kwargs
+
+    apply_custom_provider_extra_headers_to_client_kwargs(kwargs, base_url or "")
+
+
 def _build_anthropic_client_with_bearer_hook(
     token_provider,
     base_url: str = None,
@@ -720,6 +727,8 @@ def _build_anthropic_client_with_bearer_hook(
     )
     if common_betas:
         kwargs["default_headers"] = {"anthropic-beta": ",".join(common_betas)}
+
+    _apply_custom_provider_headers(kwargs, base_url)
 
     return _anthropic_sdk.Anthropic(**kwargs)
 
@@ -849,6 +858,8 @@ def build_anthropic_client(
         kwargs["api_key"] = api_key
         if common_betas:
             kwargs["default_headers"] = {"anthropic-beta": ",".join(common_betas)}
+
+    _apply_custom_provider_headers(kwargs, base_url)
 
     return _anthropic_sdk.Anthropic(**kwargs)
 

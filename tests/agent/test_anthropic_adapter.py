@@ -113,6 +113,40 @@ class TestBuildAnthropicClient:
                 "anthropic-beta": "interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14"
             }
 
+    def test_custom_provider_headers_apply_to_anthropic_client(self):
+        with (
+            patch("agent.anthropic_adapter._anthropic_sdk") as mock_sdk,
+            patch(
+                "hermes_cli.config.get_custom_provider_extra_headers",
+                return_value={"X-Client": "hermes"},
+            ),
+        ):
+            build_anthropic_client(
+                "sk-ant-api03-x",
+                base_url="http://127.0.0.1:8787",
+            )
+
+        headers = mock_sdk.Anthropic.call_args.kwargs["default_headers"]
+        assert headers["X-Client"] == "hermes"
+        assert "interleaved-thinking-2025-05-14" in headers["anthropic-beta"]
+
+    def test_custom_provider_headers_preserve_kimi_user_agent(self):
+        with (
+            patch("agent.anthropic_adapter._anthropic_sdk") as mock_sdk,
+            patch(
+                "hermes_cli.config.get_custom_provider_extra_headers",
+                return_value={"X-Client": "hermes"},
+            ),
+        ):
+            build_anthropic_client(
+                "kimi-secret",
+                base_url="https://api.kimi.com/coding",
+            )
+
+        headers = mock_sdk.Anthropic.call_args.kwargs["default_headers"]
+        assert headers["X-Client"] == "hermes"
+        assert headers["User-Agent"] == "claude-code/0.1.0"
+
     def test_custom_base_url_strips_trailing_v1(self):
         with patch("agent.anthropic_adapter._anthropic_sdk") as mock_sdk:
             build_anthropic_client(

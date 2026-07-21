@@ -4705,6 +4705,8 @@ class AIAgent:
         # custom_providers[].extra_headers) — applied last so the most
         # specific config level survives credential swaps and rebuilds too.
         # SECURITY: values may carry credentials — never log them.
+        # Native Anthropic applies the same provider-scoped headers centrally
+        # in build_anthropic_client(); Bedrock remains intentionally separate.
         if self.api_mode not in ("anthropic_messages", "bedrock_converse"):
             try:
                 from hermes_cli.config import (

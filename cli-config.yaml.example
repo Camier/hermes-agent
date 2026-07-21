@@ -94,7 +94,8 @@ model:
   # Per-provider variant: named providers / custom_providers entries accept an
   # extra_headers dict scoped to that endpoint only — for reverse proxies,
   # gateways, or custom auth (e.g. Cloudflare Access service tokens).
-  # Merged onto SDK/provider defaults with the entry's values winning.
+  # Applies to OpenAI-wire and native Anthropic clients (not Bedrock), and is
+  # merged onto SDK/provider defaults with the entry's values winning.
   # Header values are treated as secrets and are never logged.
   #
   # providers:
@@ -104,7 +105,7 @@ model:
   #     extra_headers:
   #       CF-Access-Client-Id: "xxxx.access"
   #       CF-Access-Client-Secret: "${CF_ACCESS_SECRET}"
-  #       X-Client-Name: "hermes-agent"
+  #       X-Client: "hermes"
 
 # Named provider overrides (optional)
 # Use this for per-provider request timeouts, non-stream stale timeouts,

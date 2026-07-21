@@ -5405,7 +5405,7 @@ def apply_custom_provider_extra_headers_to_client_kwargs(
     custom_providers: Optional[List[Dict[str, Any]]] = None,
     config: Optional[Dict[str, Any]] = None,
 ) -> None:
-    """Merge per-provider ``extra_headers`` onto OpenAI client ``default_headers``.
+    """Merge per-provider ``extra_headers`` onto SDK client ``default_headers``.
 
     Provider-specific headers win over provider/SDK defaults already present in
     ``client_kwargs`` — they are the most specific configuration level. No-op
