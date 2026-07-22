@@ -998,6 +998,14 @@ def _ensure_hermes_home_managed(home: Path):
 DEFAULT_CONFIG = {
     "model": "",
     "providers": {},
+    # Optional transparent inference transport. Hermes continues to resolve
+    # the provider/model/credentials; only the final HTTP request is sent via
+    # Headroom, which receives the preserved upstream in routing headers.
+    "headroom": {
+        "enabled": False,
+        "url": "http://127.0.0.1:8787",
+        "strict": True,
+    },
     "fallback_providers": [],
     "credential_pool_strategies": {},
     "toolsets": ["hermes-cli"],

@@ -201,6 +201,7 @@ class MiniSWERunner:
         # construct directly.  Otherwise use the router for OpenRouter.
         if api_key or base_url:
             from openai import OpenAI
+            from agent.headroom_routing import headroom_openai_http_client_kwargs
             client_kwargs = {
                 "base_url": base_url or "https://openrouter.ai/api/v1",
                 "api_key": api_key or os.getenv(
@@ -208,6 +209,7 @@ class MiniSWERunner:
                     os.getenv("ANTHROPIC_API_KEY",
                               os.getenv("OPENAI_API_KEY", ""))),
             }
+            client_kwargs.update(headroom_openai_http_client_kwargs(client_kwargs["base_url"]))
             self.client = OpenAI(**client_kwargs)
         else:
             from agent.auxiliary_client import resolve_provider_client
@@ -217,9 +219,13 @@ class MiniSWERunner:
                 self.client, _ = resolve_provider_client("auto", model=model)
             if self.client is None:
                 from openai import OpenAI
+                from agent.headroom_routing import headroom_openai_http_client_kwargs
+                _base_url = "https://openrouter.ai/api/v1"
                 self.client = OpenAI(
-                    base_url="https://openrouter.ai/api/v1",
-                    api_key=os.getenv("OPENROUTER_API_KEY", ""))
+                    **headroom_openai_http_client_kwargs(_base_url),
+                    base_url=_base_url,
+                    api_key=os.getenv("OPENROUTER_API_KEY", ""),
+                )
         
         # Environment will be created per-task
         self.env = None

@@ -107,6 +107,19 @@ model:
   #       CF-Access-Client-Secret: "${CF_ACCESS_SECRET}"
   #       X-Client: "hermes"
 
+# Transparent inference routing through one Headroom proxy. Hermes still
+# chooses the provider, model, credentials, fallback, and API transport; the
+# final HTTP request is optimized by Headroom and forwarded to that upstream.
+# Strict mode refuses unsupported direct transports instead of bypassing the
+# proxy silently. This covers primary, auxiliary, delegated, fallback, cron,
+# gateway, and desktop inference because they share the same SDK clients.
+# `url` is the bare proxy origin; do not append `/v1`. Existing clients keep
+# the settings they started with and must be rebuilt after this block changes.
+headroom:
+  enabled: false
+  url: "http://127.0.0.1:8787"
+  strict: true
+
 # Named provider overrides (optional)
 # Use this for per-provider request timeouts, non-stream stale timeouts,
 # and per-model exceptions.

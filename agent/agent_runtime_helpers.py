@@ -1847,6 +1847,11 @@ def anthropic_prompt_cache_policy(
 
 def create_openai_client(agent, client_kwargs: dict, *, reason: str, shared: bool) -> Any:
     from agent.auxiliary_client import _validate_base_url, _validate_proxy_env_urls
+    from agent.headroom_routing import (
+        HeadroomRoutingError,
+        ensure_headroom_httpx_client,
+        load_headroom_routing_settings,
+    )
     from agent.ssl_verify import resolve_httpx_verify
     # Treat client_kwargs as read-only. Callers pass agent._client_kwargs (or shallow
     # copies of it) in; any in-place mutation leaks back into the stored dict and is
@@ -1863,6 +1868,11 @@ def create_openai_client(agent, client_kwargs: dict, *, reason: str, shared: boo
     _validate_proxy_env_urls()
     _validate_base_url(client_kwargs.get("base_url"))
     if agent.provider == "copilot-acp" or str(client_kwargs.get("base_url", "")).startswith("acp://copilot"):
+        _headroom = load_headroom_routing_settings()
+        if _headroom.enabled and _headroom.strict:
+            raise HeadroomRoutingError(
+                "Headroom strict routing cannot proxy the non-HTTP copilot-acp transport"
+            )
         from agent.copilot_acp_client import CopilotACPClient
 
         client = CopilotACPClient(**client_kwargs)
@@ -1888,6 +1898,7 @@ def create_openai_client(agent, client_kwargs: dict, *, reason: str, shared: boo
                 )
                 if keepalive_http is not None:
                     safe_kwargs["http_client"] = keepalive_http
+            ensure_headroom_httpx_client(safe_kwargs.get("http_client"))
             client = GeminiNativeClient(**safe_kwargs)
             _ra().logger.info(
                 "Gemini native client created (%s, shared=%s) %s",
@@ -1919,6 +1930,7 @@ def create_openai_client(agent, client_kwargs: dict, *, reason: str, shared: boo
         )
         if keepalive_http is not None:
             client_kwargs["http_client"] = keepalive_http
+    ensure_headroom_httpx_client(client_kwargs.get("http_client"))
     # Delegate all rate-limit / 5xx retry to hermes's outer conversation loop,
     # which honors Retry-After and applies adaptive/jittered backoff. The OpenAI
     # SDK default (max_retries=2) uses its own 1-2s backoff that ignores

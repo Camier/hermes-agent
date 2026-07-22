@@ -28,6 +28,11 @@ import sys
 import urllib.request
 from typing import Any, Optional
 
+from agent.headroom_routing import (
+    HeadroomRoutingError,
+    install_headroom_httpx_hook,
+    load_headroom_routing_settings,
+)
 from utils import base_url_hostname, normalize_proxy_url
 
 
@@ -172,7 +177,11 @@ def build_keepalive_http_client(
     try:
         import httpx
 
-        proxy = _get_proxy_for_base_url(base_url)
+        headroom_settings = load_headroom_routing_settings()
+        # The effective TCP peer is Headroom, not the selected LLM provider.
+        # Connect to the local persistent service directly; Headroom owns the
+        # provider-side proxy/TLS hop after it receives the preserved upstream.
+        proxy = None if headroom_settings.enabled else _get_proxy_for_base_url(base_url)
 
         limits = httpx.Limits(
             max_keepalive_connections=20,
@@ -190,13 +199,18 @@ def build_keepalive_http_client(
                 "http://": transport_cls(verify=verify),
                 "https://": transport_cls(verify=verify),
             }
-        return client_cls(
+        client = client_cls(
             limits=limits,
             timeout=timeout,
             proxy=proxy,
             mounts=mounts or None,
             verify=verify,
         )
+        install_headroom_httpx_hook(client, settings=headroom_settings)
+        return client
+    except HeadroomRoutingError:
+        # Strict mode must never degrade into the SDK's direct transport.
+        raise
     except Exception:
         return None
 

@@ -202,6 +202,9 @@ def _openai_http_client_kwargs(
 
 def _create_openai_client(*, api_key: str, base_url: str, **kwargs: Any) -> Any:
     kwargs = {**_openai_http_client_kwargs(base_url), **kwargs}
+    from agent.headroom_routing import ensure_headroom_httpx_client
+
+    ensure_headroom_httpx_client(kwargs.get("http_client"))
     # Hermes owns auxiliary retry + provider/model fallback policy (the
     # same-provider transient retry in call_llm plus the except-chain
     # fallback). The OpenAI SDK's own default (max_retries=2 → up to 3
@@ -5323,8 +5326,7 @@ def resolve_provider_client(
         default_model = "google/gemini-3-flash-preview"
         final_model = _normalize_resolved_model(model or default_model, provider)
         try:
-            from openai import OpenAI
-            client = OpenAI(api_key=token, base_url=base_url)
+            client = _create_openai_client(api_key=token, base_url=base_url)
         except Exception as exc:
             logger.warning("resolve_provider_client: cannot create Vertex "
                            "client: %s", exc)

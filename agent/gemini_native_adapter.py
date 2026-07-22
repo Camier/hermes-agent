@@ -889,9 +889,20 @@ class GeminiNativeClient:
         self._default_headers = dict(default_headers or {})
         self.chat = _GeminiChatNamespace(self)
         self.is_closed = False
-        self._http = http_client or httpx.Client(
-            timeout=timeout or httpx.Timeout(connect=15.0, read=600.0, write=30.0, pool=30.0)
+        from agent.headroom_routing import (
+            install_headroom_httpx_hook,
+            load_headroom_routing_settings,
         )
+
+        headroom_settings = load_headroom_routing_settings()
+        self._http = http_client or httpx.Client(
+            timeout=timeout or httpx.Timeout(connect=15.0, read=600.0, write=30.0, pool=30.0),
+            # The final TCP peer is the local Headroom service.  Do not let a
+            # machine-wide proxy intercept that hop when Hermes built the
+            # native Gemini client directly (auxiliary paths do this).
+            trust_env=not headroom_settings.enabled,
+        )
+        install_headroom_httpx_hook(self._http, settings=headroom_settings)
 
     def close(self) -> None:
         self.is_closed = True

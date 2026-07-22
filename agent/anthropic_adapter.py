@@ -689,6 +689,10 @@ def _build_anthropic_client_with_bearer_hook(
 
     from httpx import Timeout
     from agent.azure_identity_adapter import build_bearer_http_client
+    from agent.headroom_routing import (
+        install_headroom_httpx_hook,
+        load_headroom_routing_settings,
+    )
 
     _read_timeout = timeout if (isinstance(timeout, (int, float)) and timeout > 0) else 900.0
     timeout_obj = Timeout(timeout=float(_read_timeout), connect=10.0)
@@ -699,7 +703,12 @@ def _build_anthropic_client_with_bearer_hook(
         import re as _re
         normalized_base_url = _re.sub(r"/v1/?$", "", normalized_base_url.rstrip("/"))
 
-    http_client = build_bearer_http_client(token_provider, timeout=timeout_obj)
+    _headroom = load_headroom_routing_settings()
+    _httpx_kwargs = {"timeout": timeout_obj}
+    if _headroom.enabled:
+        _httpx_kwargs["trust_env"] = False
+    http_client = build_bearer_http_client(token_provider, **_httpx_kwargs)
+    install_headroom_httpx_hook(http_client, settings=_headroom)
 
     kwargs = {
         "timeout": timeout_obj,
@@ -860,6 +869,12 @@ def build_anthropic_client(
             kwargs["default_headers"] = {"anthropic-beta": ",".join(common_betas)}
 
     _apply_custom_provider_headers(kwargs, base_url)
+
+    from agent.headroom_routing import build_headroom_httpx_client
+
+    headroom_http_client = build_headroom_httpx_client(timeout=kwargs["timeout"])
+    if headroom_http_client is not None:
+        kwargs["http_client"] = headroom_http_client
 
     return _anthropic_sdk.Anthropic(**kwargs)
 

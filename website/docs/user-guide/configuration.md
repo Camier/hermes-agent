@@ -87,6 +87,34 @@ Multiple references in a single value work: `url: "${HOST}:${PORT}"`. If a refer
 
 For AI provider setup (OpenRouter, Anthropic, Copilot, custom endpoints, self-hosted LLMs, fallback models, etc.), see [AI Providers](/integrations/providers).
 
+### Transparent Headroom Routing
+
+Hermes can send all SDK-based inference through one Headroom proxy while
+retaining the provider, model, credentials, API protocol, and upstream URL it
+resolved normally:
+
+```yaml
+headroom:
+  enabled: true
+  url: http://127.0.0.1:8787
+  strict: true
+```
+
+`headroom.url` is the bare proxy origin; do not append `/v1`. A running client
+keeps the routing settings it started with, so rebuild the client or start a
+new Hermes session after changing this block.
+
+This applies to primary, auxiliary, fallback, delegated, cron, gateway, TUI,
+and desktop inference because those paths share the same OpenAI/Anthropic HTTP
+clients. `strict: true` prevents an unsupported non-HTTP or unrelated local
+transport from bypassing Headroom silently. MCP, browser, image, speech, and
+other non-inference traffic are unchanged.
+
+Hermes uses Headroom's documented per-request upstream override and preserves
+the exact original path for OpenAI-compatible gateways. Codex OAuth remains on
+Headroom's native `/v1/responses` routing. See Headroom's
+[proxy upstream override](https://headroom-docs.vercel.app/docs/configuration#proxy-upstream-override-x-headroom-base-url).
+
 ### Provider Timeouts
 
 You can set `providers.<id>.request_timeout_seconds` for a provider-wide request timeout, plus `providers.<id>.models.<model>.timeout_seconds` for a model-specific override. Applies to the primary turn client on every transport (OpenAI-wire, native Anthropic, Anthropic-compatible), the fallback chain, rebuilds after credential rotation, and (for OpenAI-wire) the per-request timeout kwarg — so the configured value wins over the legacy `HERMES_API_TIMEOUT` env var.
