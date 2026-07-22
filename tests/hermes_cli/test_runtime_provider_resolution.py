@@ -128,6 +128,40 @@ def test_copilot_pool_uses_target_model_for_api_mode(monkeypatch):
     assert resolved["api_mode"] == "chat_completions"
 
 
+def test_copilot_explicit_runtime_uses_target_model_for_api_mode(monkeypatch):
+    """Explicit Copilot credentials must honor the requested model transport."""
+
+    monkeypatch.setattr(rp, "load_config", lambda: {})
+    monkeypatch.setattr(rp, "resolve_provider", lambda *a, **k: "copilot")
+    monkeypatch.setattr(
+        rp,
+        "_get_model_config",
+        lambda: {
+            "provider": "openai-codex",
+            "default": "gpt-5.6-terra",
+            "api_mode": "codex_responses",
+        },
+    )
+    monkeypatch.setattr(
+        rp,
+        "load_pool",
+        lambda _provider: (_ for _ in ()).throw(
+            AssertionError("explicit runtime must resolve before credential pools")
+        ),
+    )
+
+    resolved = rp.resolve_runtime_provider(
+        requested="copilot",
+        explicit_api_key="copilot-token",
+        explicit_base_url="https://api.githubcopilot.com",
+        target_model="gpt-4.1",
+    )
+
+    assert resolved["provider"] == "copilot"
+    assert resolved["api_mode"] == "chat_completions"
+    assert resolved["source"] == "explicit"
+
+
 def test_resolve_runtime_provider_nous_pool_uses_env_base_url_override(monkeypatch):
     entry = SimpleNamespace(
         provider="nous",
