@@ -86,6 +86,48 @@ def test_resolve_runtime_provider_uses_credential_pool(monkeypatch):
     assert resolved["source"] == "manual"
 
 
+def test_copilot_pool_uses_target_model_for_api_mode(monkeypatch):
+    """A CLI model override must not inherit the persisted Codex transport."""
+
+    class _Entry:
+        provider = "copilot"
+        runtime_api_key = "copilot-token"
+        access_token = "copilot-token"
+        source = "env:GITHUB_TOKEN"
+        runtime_base_url = "https://api.githubcopilot.com"
+        base_url = "https://api.githubcopilot.com"
+
+    class _Pool:
+        provider = "copilot"
+
+        def has_credentials(self):
+            return True
+
+        def select(self):
+            return _Entry()
+
+    monkeypatch.setattr(rp, "load_config", lambda: {})
+    monkeypatch.setattr(rp, "resolve_provider", lambda *a, **k: "copilot")
+    monkeypatch.setattr(
+        rp,
+        "_get_model_config",
+        lambda: {
+            "provider": "openai-codex",
+            "default": "gpt-5.6-terra",
+            "api_mode": "codex_responses",
+        },
+    )
+    monkeypatch.setattr(rp, "load_pool", lambda _provider: _Pool())
+
+    resolved = rp.resolve_runtime_provider(
+        requested="copilot",
+        target_model="gpt-4.1",
+    )
+
+    assert resolved["provider"] == "copilot"
+    assert resolved["api_mode"] == "chat_completions"
+
+
 def test_resolve_runtime_provider_nous_pool_uses_env_base_url_override(monkeypatch):
     entry = SimpleNamespace(
         provider="nous",
